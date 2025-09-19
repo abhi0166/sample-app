@@ -8,19 +8,34 @@ steps:
   # Step 2: Build the Docker image for the Go application
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Build Docker image'
-    args: ['build', '-t', '${REGION}-docker.pkg.dev/$PROJECT_ID/my-repository/hello-cloudbuild:${VERSION}', '.']
+    args: [
+      'build',
+      '-t',
+      '${_REGION}-docker.pkg.dev/$PROJECT_ID/my-repository/hello-cloudbuild:${_TAG}', # Using _REGION and _TAG
+      '.'
+    ]
 
   # Step 3: Push the Docker image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     id: 'Push Docker image'
-    args: ['push', '${REGION}-docker.pkg.dev/$PROJECT_ID/my-repository/hello-cloudbuild:${VERSION}']
+    args: [
+      'push',
+      '${_REGION}-docker.pkg.dev/$PROJECT_ID/my-repository/hello-cloudbuild:${_TAG}' # Using _REGION and _TAG
+    ]
 
   # Step 4: Apply the production deployment YAML file to the production namespace
   - name: 'gcr.io/cloud-builders/kubectl'
     id: 'Deploy'
     args: ['-n', 'prod', 'apply', '-f', 'prod/deployment.yaml']
     env:
-    - 'CLOUDSDK_COMPUTE_REGION=<your-zone>'
+    - 'CLOUDSDK_COMPUTE_REGION=${_REGION}' # Using _REGION (region, not zone)
     - 'CLOUDSDK_CONTAINER_CLUSTER=hello-cluster'
+
 options:
- logging: CLOUD_LOGGING_ONLY
+  logging: CLOUD_LOGGING_ONLY
+
+# Define your substitutions here
+substitutions:
+  _REGION: 'europe-west1' # <<< IMPORTANT: Replace with your actual Google Cloud region (e.g., 'us-central1')
+  _TAG: '${COMMIT_SHA}'   # <<< IMPORTANT: Use a suitable version tag (e.g., '$COMMIT_SHA' for commit ID, or '$TAG_NAME' if triggering by Git tag)
+                          # If you want to use a specific version, like '1.0.0', set it here.
